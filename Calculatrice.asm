@@ -1,11 +1,18 @@
-				org $4
-Vector_001 		dc.l Main
+				org $0
+vector_000		dc.l $ffb500
+vector_001 		dc.l Main
 				org $500
-Main 			movea.l	#STREXAMPLE,a0
-				jsr		StrLen
+Main 			lea		STREXAMPLE,a0
+				move.b	#24,d1
+				move.b	#20,d2
+				jsr		Print
 				illegal
-				
-; StrLen a0 -> d0
+
+; PrintChar d0.b d1.b d2.b -> void
+; Print d0.b at X=d1.b and Y=d2.b 
+PrintChar 		incbin "PrintChar.bin"
+
+; StrLen a0 -> d0.l
 StrLen			move.l a0,-(a7)
 				clr.l	d0
 \loop			tst.b	(a0)+
@@ -15,8 +22,8 @@ StrLen			move.l a0,-(a7)
 \exit			move.l	(a7)+,a0
 				rts
 
-; Atoiui a0 -> d0
-Atoiui			movem.l	d1/a0,-(a7)
+; Atoiui a0 -> d0.l
+Atoui			movem.l	d1/a0,-(a7)
 				clr.l	d0
 				clr.l	d1
 \loop			move.b	(a0)+,d1
@@ -77,13 +84,42 @@ IsMaxError		movem.l d0/a0,-(a7)
 \true 			ori.b #%00000100,ccr
 \quit			movem.l (a7)+,d0/a0
 				rts
-				
+
+; Convert a0 -> d0.l			
 Convert			jsr		RemoveSpace
 				jsr		IsCharError
 				beq		\err
 				jsr		IsMaxError
 				beq		\err
 				jsr		Atoui
+				ori.b	#%00000100,ccr
+				rts
+				
+\err			andi.b	#%11111011,ccr
+
+Print			movem.l	a0/d0/d1,-(a7)
+\loop			move.b	(a0)+,d0
+				beq		\exit
+				jsr 	PrintChar
+				addq.b	#1,d1
+				jmp		\loop
+\exit			movem.l	(a7)+,a0/d0/d1
+				rts
+				
+;NextOp a0.l -> a0.l
+NextOp			tst.b	(a0)
+				beq		\exit
+				cmpi.b	#'+',(a0)
+				beq		\exit
+				cmpi.b	#'-',(a0)
+				beq		\exit
+				cmpi.b	#'*',(a0)
+				beq		\exit
+				cmpi.b	#'/',(a0)
+				beq		\exit
+				addq.l	#1,a0
+				jmp		NextOp
+\exit			rts
 				
 				
-STREXAMPLE		dc.b "Hello World!",0
+STREXAMPLE		dc.b "LETZ PLAY SPAZE INVADERZ",0
